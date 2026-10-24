@@ -101,62 +101,12 @@ The script creates indexes on:
 ## Setup and Execution
 
 1. Start MySQL Server and open MySQL Workbench or your preferred MySQL client.
-2. Open the provided SQL file: `project tables and values sql.sql`.
+2. Open the provided .txt file.
 3. Execute the script from the beginning.
 
-The script starts with:
-
-```sql
-DROP DATABASE IF EXISTS online_movie_ticket_booking;
-CREATE DATABASE online_movie_ticket_booking;
-USE online_movie_ticket_booking;
-```
-
-**Warning:** Running the full script again drops the existing `online_movie_ticket_booking` database and recreates it. Any data already stored in that database will be lost.
 
 The script creates the schema, inserts sample records, defines indexes/views/procedures/triggers, and runs example queries and procedure calls.
 
-## Example Queries and Procedures
-
-Run these after the script has created the database objects.
-
-```sql
--- List all movies
-SELECT * FROM movies;
-
--- Find Telugu-language movies
-SELECT *
-FROM movies
-WHERE language = 'Telugu';
-
--- Find shows with ticket prices above 250
-SELECT *
-FROM shows
-WHERE ticket_price > 250;
-
--- Show bookings paid through UPI
-SELECT *
-FROM bookings
-WHERE payment_mode = 'UPI';
-
--- Count movies in each genre
-SELECT genre, COUNT(*)
-FROM movies
-GROUP BY genre;
-
--- Calculate total booking revenue
-SELECT SUM(total_amount) AS Total_Revenue
-FROM bookings;
-
--- View booking summaries
-SELECT * FROM view_booking_summary;
-
--- Get bookings for customer ID 1
-CALL sp_customer_bookings(1);
-
--- Generate revenue totals by payment mode
-CALL sp_revenue_report();
-```
 
 ## Important Notes
 
