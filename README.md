@@ -105,9 +105,6 @@ The script creates indexes on:
 3. Execute the script from the beginning.
 
 
-The script creates the schema, inserts sample records, defines indexes/views/procedures/triggers, and runs example queries and procedure calls.
-
-
 ## Important Notes
 
 - The sample show dates and booking dates are historical example data.
@@ -126,6 +123,3 @@ The script creates the schema, inserts sample records, defines indexes/views/pro
 - Add cancellation and refund workflows.
 - Add user authentication and an application interface.
 
-## License
-
-No license is specified in the supplied SQL project. Add a license if you plan to publish or distribute the project.
