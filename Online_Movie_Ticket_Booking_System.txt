@@ -1,0 +1,428 @@
+================================
+PART 1: DATABASE & TABLE CREATION
+================================
+CREATE DATABASE online_movie_ticket_booking;
+USE online_movie_ticket_booking;
+
+--CUSTOMERS
+CREATE TABLE customers (
+    customer_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_name VARCHAR(100),
+    phone VARCHAR(15),
+    email VARCHAR(100)
+);
+
+-- THEATRES
+CREATE TABLE theatres (
+    theatre_id INT AUTO_INCREMENT PRIMARY KEY,
+    theatre_name VARCHAR(100),
+    city VARCHAR(50),
+    total_screens INT
+);
+
+-- MOVIES
+CREATE TABLE movies (
+    movie_id INT AUTO_INCREMENT PRIMARY KEY,
+    movie_name VARCHAR(100),
+    genre VARCHAR(50),
+    language VARCHAR(50),
+    duration_minutes INT,
+    release_date DATE
+);
+
+-- SHOWS
+CREATE TABLE shows (
+    show_id INT AUTO_INCREMENT PRIMARY KEY,
+    movie_id INT,
+    theatre_id INT,
+    show_date DATE,
+    show_time TIME,
+    ticket_price DECIMAL(10,2),
+    available_seats INT,
+    FOREIGN KEY(movie_id) REFERENCES movies(movie_id),
+    FOREIGN KEY(theatre_id) REFERENCES theatres(theatre_id)
+);
+
+-- BOOKINGS
+CREATE TABLE bookings (
+    booking_id INT AUTO_INCREMENT PRIMARY KEY,
+    customer_id INT,
+    booking_date DATE,
+    total_amount DECIMAL(10,2),
+    payment_mode ENUM('UPI','Cash','Card'),
+    FOREIGN KEY(customer_id)
+    REFERENCES customers(customer_id)
+);
+
+-- BOOKING DETAILS (Weak Entity)
+CREATE TABLE booking_details (
+    ticket_id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT,
+    show_id INT,
+    seats_booked INT,
+    subtotal DECIMAL(10,2),
+    FOREIGN KEY(booking_id)
+    REFERENCES bookings(booking_id),
+    FOREIGN KEY(show_id)
+    REFERENCES shows(show_id)
+);
+===============================
+PART  2: SAMPLE DATA
+===============================
+-- Customers
+INSERT INTO customers(customer_name,phone,email)
+VALUES
+('Rahul Sharma','9876543210','rahul@gmail.com'),
+('Priya Verma','9876543211','priya@gmail.com'),
+('Amit Patel','9876543212','amit@gmail.com'),
+('Sneha Reddy','9876543213','sneha@gmail.com'),
+('Vikram Singh','9876543214','vikram@gmail.com');
+
+-- Theatres
+INSERT INTO theatres(theatre_name,city,total_screens)
+VALUES
+('INOX','Mumbai',5),
+('PVR Cinemas','Delhi',6),
+('Cinepolis','Hyderabad',4);
+
+-- Movies
+INSERT INTO movies(movie_name,genre,language,duration_minutes,release_date)
+VALUES
+('Leo','Action','Tamil',165,'2023-10-19'),
+('Jawan','Action','Hindi',170,'2023-09-07'),
+('Salaar','Action','Telugu',175,'2023-12-22'),
+('Hi Nanna','Drama','Telugu',155,'2023-12-07'),
+('Animal','Thriller','Hindi',201,'2023-12-01');
+
+-- Shows
+INSERT INTO shows(movie_id,theatre_id,show_date,show_time,ticket_price,available_seats)
+VALUES
+(1,1,'2024-01-10','10:00:00',200,100),
+(2,2,'2024-01-10','14:00:00',250,120),
+(3,3,'2024-01-11','18:00:00',300,80),
+(4,1,'2024-01-11','20:00:00',180,90),
+(5,2,'2024-01-12','21:00:00',350,75);
+
+-- Bookings
+INSERT INTO bookings(customer_id,booking_date,total_amount,payment_mode)
+VALUES
+(1,'2024-01-05',400,'UPI'),
+(2,'2024-01-05',500,'Card'),
+(3,'2024-01-06',300,'Cash'),
+(4,'2024-01-07',600,'UPI');
+
+-- Booking Details
+INSERT INTO booking_details
+(booking_id,show_id,seats_booked,subtotal)
+VALUES
+(1,1,2,400),
+(2,2,2,500),
+(3,3,1,300),
+(4,4,3,540);
+======================
+PART  3: INDEXES
+======================
+CREATE INDEX idx_show_movie
+ON shows(movie_id);
+
+CREATE INDEX idx_show_theatre
+ON shows(theatre_id);
+
+CREATE INDEX idx_booking_customer
+ON bookings(customer_id);
+
+CREATE INDEX idx_booking_details_show
+ON booking_details(show_id);
+
+CREATE INDEX idx_movie_genre
+ON movies(genre);
+
+CREATE INDEX idx_theatre_city
+ON theatres(city);
+
+=========================
+PART  4: VIEWS
+=========================
+CREATE VIEW view_booking_summary AS
+SELECT
+b.booking_id,
+c.customer_name,
+b.booking_date,
+b.total_amount,
+b.payment_mode
+FROM bookings b
+JOIN customers c
+ON b.customer_id=c.customer_id;
+
+CREATE VIEW view_low_seats AS
+SELECT *
+FROM shows
+WHERE available_seats < 100;
+
+CREATE VIEW view_customer_spend AS
+SELECT
+c.customer_id,
+c.customer_name,
+COUNT(b.booking_id) total_bookings,
+SUM(b.total_amount) total_spent
+FROM customers c
+LEFT JOIN bookings b
+ON c.customer_id=b.customer_id
+GROUP BY c.customer_id;
+
+================================
+PART  5: STORED PROCEDURES
+=================================
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_customer_bookings(
+IN p_customer_id INT
+)
+BEGIN
+SELECT *
+FROM bookings
+WHERE customer_id=p_customer_id;
+END $$
+
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_book_ticket(
+IN p_customer_id INT,
+IN p_show_id INT,
+IN p_seats INT,
+IN p_payment_mode VARCHAR(10)
+)
+
+BEGIN
+
+DECLARE v_price DECIMAL(10,2);
+DECLARE v_total DECIMAL(10,2);
+
+SELECT ticket_price
+INTO v_price
+FROM shows
+WHERE show_id=p_show_id;
+
+SET v_total=v_price*p_seats;
+
+INSERT INTO bookings
+(customer_id,booking_date,total_amount,payment_mode)
+VALUES
+(p_customer_id,CURDATE(),v_total,p_payment_mode);
+
+END $$
+
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE PROCEDURE sp_revenue_report()
+BEGIN
+
+SELECT
+payment_mode,
+SUM(total_amount) total_revenue
+FROM bookings
+GROUP BY payment_mode;
+
+END $$
+
+DELIMITER 
+CREATE TABLE seat_log(
+
+log_id INT AUTO_INCREMENT PRIMARY KEY,
+show_id INT,
+seat_change INT,
+change_type VARCHAR(20),
+change_date DATETIME DEFAULT CURRENT_TIMESTAMP
+
+);
+
+========================
+PART  6: TRIGGERS
+========================
+DELIMITER $$
+
+CREATE TRIGGER trg_reduce_seats
+
+AFTER INSERT ON booking_details
+
+FOR EACH ROW
+
+BEGIN
+
+UPDATE shows
+SET available_seats =
+available_seats - NEW.seats_booked
+WHERE show_id=NEW.show_id;
+
+END $$
+
+DELIMITER ;
+DELIMITER $$
+
+CREATE TRIGGER trg_prevent_overbooking
+
+BEFORE INSERT ON booking_details
+
+FOR EACH ROW
+
+BEGIN
+
+DECLARE v_seats INT;
+
+SELECT available_seats
+INTO v_seats
+FROM shows
+WHERE show_id=NEW.show_id;
+
+IF v_seats < NEW.seats_booked THEN
+
+SIGNAL SQLSTATE '45000'
+SET MESSAGE_TEXT='Seats Not Available';
+
+END IF;
+
+END $$
+
+DELIMITER ;
+
+=======================
+PART  7: QUERY BANK
+=======================
+
+Q1 Display all movies
+SQL
+SELECT * FROM movies;
+
+Q2 Display all theatres
+SQL
+SELECT * FROM theatres;
+
+Q3 Display all customers
+SQL
+SELECT * FROM customers;
+
+Q4 Display all shows
+SQL
+SELECT * FROM shows;
+
+PART 8: QUERY BANK (LEVEL 2)
+Q5 Movies in Telugu
+SQL
+SELECT *
+FROM movies
+WHERE language='Telugu';
+
+Q6 Shows with ticket price above 250
+SQL
+SELECT *
+FROM shows
+WHERE ticket_price > 250;
+
+Q7 Customers paid through UPI
+SQL
+SELECT *
+FROM bookings
+WHERE payment_mode='UPI';
+
+Q8 Count movies by genre
+SQL
+SELECT genre,COUNT(*)
+FROM movies
+GROUP BY genre;
+
+PART 9: QUERY BANK (LEVEL 3)
+Q9 Total Revenue
+SQL
+SELECT SUM(total_amount)
+AS Total_Revenue
+FROM bookings;
+
+Q10 Most Popular Movie
+SQL
+SELECT
+m.movie_name,
+SUM(bd.seats_booked) tickets
+FROM movies m
+JOIN shows s
+ON m.movie_id=s.movie_id
+JOIN booking_details bd
+ON s.show_id=bd.show_id
+GROUP BY m.movie_name
+ORDER BY tickets DESC
+LIMIT 1;
+
+Q11 Highest Ticket Price Show
+SQL
+SELECT *
+FROM shows
+ORDER BY ticket_price DESC
+LIMIT 1;
+
+
+SQL
+-- Q12
+SELECT AVG(ticket_price) FROM shows;
+ 
+-- Q13
+SELECT MIN(ticket_price) FROM shows;
+ 
+-- Q14
+SELECT MAX(ticket_price) FROM shows;
+ 
+-- Q15
+SELECT city,COUNT(*) FROM theatres
+GROUP BY city;
+ 
+-- Q16
+SELECT payment_mode,
+SUM(total_amount)
+FROM bookings
+GROUP BY payment_mode;
+ 
+-- Q17
+SELECT movie_name
+FROM movies
+ORDER BY release_date DESC;
+ 
+-- Q18
+SELECT *
+FROM shows
+WHERE available_seats < 90;
+ 
+-- Q19
+SELECT customer_name
+FROM customers
+ORDER BY customer_name;
+ 
+-- Q20
+SELECT theatre_name,total_screens
+FROM theatres;
+ 
+-- Q21
+SELECT COUNT(*)
+FROM bookings;
+PART 11: DEMO CALLS
+SQL
+-- View
+SELECT * FROM view_booking_summary;
+ 
+-- Stored Procedure
+CALL sp_customer_bookings(1);
+ 
+-- Revenue Procedure
+CALL sp_revenue_report();
+ 
+-- Ticket Booking
+CALL sp_book_ticket(1,1,2,'UPI');
+ 
+-- Trigger Test
+INSERT INTO booking_details
+(booking_id,show_id,seats_booked,subtotal)
+VALUES (1,1,2,400);
